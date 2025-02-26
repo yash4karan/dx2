@@ -1,6 +1,7 @@
 add_library(
     dx2
     empty.cxx
+    predict.cxx
 )
 target_link_libraries(
     dx2
