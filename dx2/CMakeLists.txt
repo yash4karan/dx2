@@ -10,6 +10,7 @@ target_link_libraries(
     nlohmann_json::nlohmann_json
     hdf5::hdf5
     gemmi::gemmi_cpp
+    argparse
 )
 
 target_include_directories(
