@@ -1,11 +1,35 @@
-#include <dx2/experiment.h>
 #include <vector>
-#include <dx2/h5/h5write.hpp>
 #include <iostream>
+#include <chrono>
+
 #include <argparse/argparse.hpp>
+#include <dx2/experiment.h>
+#include <dx2/h5/h5write.hpp>
+#include <common.hpp>
+#include <fmt/color.h>
+#include <fmt/core.h>
+#include <fmt/os.h>
+
+// void configure_parser(argparse::ArgumentParser& parser) {
+//     parser.add_argument("-e", "--expt").help("Path to DIALS expt file");
+//     // parser.add_argument("-SHORT", "--LONG").help("HELPME").default_value<int>(1).scan<'c', int>();
+//     // parser.add_argument("-SHORT", "--LONG").help("HELPME").default_value<int>(1).scan<'c', int>();
+// }
+
+// void verify_parser(const argparse::ArgumentParser& parser) {
+//     if (!parser.is_used("ARG")) {
+//         logger->error("ERROR");
+//         std::exit(1);
+//     }
+// }
 
 int main(int argc, char **argv) {
-    
+    auto t1 = std::chrono::system_clock::now();
+    // auto parser = argparse::ArgumentParser();
+    // configure_parser(parser);
+    // parser.parse_args(argc, argv);
+    // verify_parser(parser);
+
     // Initialize an ArgumentParser object: 
     /*
     parser = ArgumentParser(
@@ -107,5 +131,9 @@ int main(int argc, char **argv) {
     Command.end(f"Saved {len(predicted_all)} reflections to {params.output}")
     */
 
+    auto t2 = std::chrono::system_clock::now();
+    std::chrono::duration<double> elapsed_time = t2 - t1;
+    // logger->info("Total time for indexer: {:.4f}s", elapsed_time.count());
+    std::cout << elapsed_time << '\n';
     return 0;
 }

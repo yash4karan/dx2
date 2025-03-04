@@ -1,16 +1,24 @@
 add_library(
     dx2
     empty.cxx
-    predict.cxx
 )
-target_link_libraries(
+
+add_executable(predict
+            predict.cxx)
+
+target_link_libraries(predict
+    PRIVATE
     dx2
+) 
+
+target_link_libraries(dx2
     PUBLIC
     Eigen3::Eigen
     nlohmann_json::nlohmann_json
     hdf5::hdf5
     gemmi::gemmi_cpp
     argparse
+    fmt
 )
 
 target_include_directories(
