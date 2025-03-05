@@ -4,8 +4,11 @@
 #include <chrono>
 #include <common.hpp>  // essential
 #include <dx2/h5/h5write.hpp>
+#include <exception>
 #include <iostream>  // Debugging
-#include <vector>    // Unused so far...
+#include <thread>
+#include <vector>  // Unused so far...
+
 // #include <fmt/color.h>
 // #include <fmt/core.h>
 // #include <fmt/os.h>
@@ -16,7 +19,7 @@ void configure_parser(argparse::ArgumentParser& parser) {
       .help("Minimum d-spacing of predicted reflections")
       .scan<'f', float>()
       .required();
-    parser.add_argument("-f", "--force_static")
+    parser.add_argument("-s", "--static_predict")
       .help("For a scan varying model, force static prediction")
       .default_value(false)
       .implicit_value(true);
@@ -39,10 +42,10 @@ void configure_parser(argparse::ArgumentParser& parser) {
         "Better performance can typically be obtained with a higher number"
         "of threads than this.")
       .scan<'u', size_t>()
-      .default_value<size_t>(1);
+      .default_value<size_t>(std::thread::hardware_concurrency());
 }
 
-void verify_parser(const argparse::ArgumentParser& parser) {
+void verify_arguments(const argparse::ArgumentParser& parser) {
     if (!parser.is_used("expt")) {
         logger->error("Must specify experiment list file with --expt\n");
         std::exit(1);
@@ -50,6 +53,10 @@ void verify_parser(const argparse::ArgumentParser& parser) {
     // FIXME use highest resolution by default to remove this requirement.
     if (!parser.is_used("dmin")) {
         logger->error("Must specify --dmin\n");
+        std::exit(1);
+    }
+    if (parser.is_used("nthreads") && parser.get<size_t>("nthreads") < 1) {
+        logger->error("--nthreads cannot by less than 1\n");
         std::exit(1);
     }
 }
@@ -66,26 +73,14 @@ int main(int argc, char** argv) {
         std::exit(1);
     }
 
-    verify_parser(parser);
+    verify_arguments(parser);
 
     auto imported_expt = parser.get<std::string>("expt");
     auto dmin = parser.get<float>("dmin");
-    auto force_static = parser.get<bool>("force_static");
-    auto ignore_shadows = parser.get<bool>("ignore_shadows");
+    auto static_predict = parser.get<bool>("static_predict");
+    auto dynamic_shadows = parser.get<bool>("dynamic_shadows");
     auto buffer_size = parser.get<size_t>("buffer_size");
     auto nthreads = parser.get<size_t>("nthreads");
-
-    std::cout << imported_expt << '\n';
-    std::cout << dmin << '\n';
-    std::cout << force_static << '\n';
-    std::cout << ignore_shadows << '\n';
-    std::cout << buffer_size << '\n';
-    std::cout << nthreads << '\n';
-
-    // Extract params, options form this parser
-    /*
-    params, options = parser.parse_args(args, show_diff_phil=True)
-    */
 
     // Flatten experiments into a 1D array
     /*
