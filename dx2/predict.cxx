@@ -2,9 +2,12 @@
 
 #include <argparse/argparse.hpp>
 #include <chrono>
-#include <common.hpp>  // essential
+// essential; common.hpp is in ffs => predict.cxx cannot be build on dx2 alone
+#include <common.hpp>
+#include <cstdlib>
 #include <dx2/h5/h5write.hpp>
 #include <exception>
+#include <fstream>
 #include <iostream>  // Debugging
 #include <thread>
 #include <vector>  // Unused so far...
@@ -13,6 +16,13 @@
 // #include <fmt/core.h>
 // #include <fmt/os.h>
 
+/**
+ * @brief Takes a default-initialized ArgumentParser object and configures it 
+ *      with the arguments to be parsed; also assigns various properties to each 
+ *      argument, eg. help message, default value, etc.
+ * 
+ * @param parser The ArgumentParser object (pre-input) to be configured.
+ */
 void configure_parser(argparse::ArgumentParser& parser) {
     parser.add_argument("-e", "--expt").help("Path to DIALS expt file").required();
     parser.add_argument("--dmin")
@@ -35,7 +45,7 @@ void configure_parser(argparse::ArgumentParser& parser) {
         "of the scan")
       .scan<'u', size_t>()
       .default_value<size_t>(0);
-    parser.add_argument("--nthreads")
+    parser.add_argument("-n", "--nthreads")
       .help(
         "The number of threads to use for the fft calculation."
         "Defaults to the value of std::thread::hardware_concurrency."
@@ -45,6 +55,12 @@ void configure_parser(argparse::ArgumentParser& parser) {
       .default_value<size_t>(std::thread::hardware_concurrency());
 }
 
+/**
+ * @brief Takes an ArgumentParser object after the user has entered input and checks 
+ *      it for consistency; outputs errors and exits the program if a check fails.
+ * 
+ * @param parser The ArgumentParser object (post-input) to be verified.
+ */
 void verify_arguments(const argparse::ArgumentParser& parser) {
     if (!parser.is_used("expt")) {
         logger->error("Must specify experiment list file with --expt\n");
@@ -56,7 +72,7 @@ void verify_arguments(const argparse::ArgumentParser& parser) {
         std::exit(1);
     }
     if (parser.is_used("nthreads") && parser.get<size_t>("nthreads") < 1) {
-        logger->error("--nthreads cannot by less than 1\n");
+        logger->error("--nthreads cannot be less than 1\n");
         std::exit(1);
     }
 }
@@ -75,6 +91,7 @@ int main(int argc, char** argv) {
 
     verify_arguments(parser);
 
+    // Obtain argument values from the command line
     auto imported_expt = parser.get<std::string>("expt");
     auto dmin = parser.get<float>("dmin");
     auto static_predict = parser.get<bool>("static_predict");
