@@ -1,45 +1,86 @@
-#include <vector>
-#include <iostream>
-#include <chrono>
+#include <dx2/experiment.h>
 
 #include <argparse/argparse.hpp>
-#include <dx2/experiment.h>
+#include <chrono>
+#include <common.hpp>  // essential
 #include <dx2/h5/h5write.hpp>
-#include <common.hpp>
-#include <fmt/color.h>
-#include <fmt/core.h>
-#include <fmt/os.h>
+#include <iostream>  // Debugging
+#include <vector>    // Unused so far...
+// #include <fmt/color.h>
+// #include <fmt/core.h>
+// #include <fmt/os.h>
 
-// void configure_parser(argparse::ArgumentParser& parser) {
-//     parser.add_argument("-e", "--expt").help("Path to DIALS expt file");
-//     // parser.add_argument("-SHORT", "--LONG").help("HELPME").default_value<int>(1).scan<'c', int>();
-//     // parser.add_argument("-SHORT", "--LONG").help("HELPME").default_value<int>(1).scan<'c', int>();
-// }
+void configure_parser(argparse::ArgumentParser& parser) {
+    parser.add_argument("-e", "--expt").help("Path to DIALS expt file").required();
+    parser.add_argument("--dmin")
+      .help("Minimum d-spacing of predicted reflections")
+      .scan<'f', float>()
+      .required();
+    parser.add_argument("-f", "--force_static")
+      .help("For a scan varying model, force static prediction")
+      .default_value(false)
+      .implicit_value(true);
+    // The below is the opposite of ignore_shadows used in DIALS
+    // This configuration allows for natural implicit-value flagging.
+    parser.add_argument("-d", "--dynamic_shadows")
+      .help("Enable dynamic shadowing")
+      .default_value(false)
+      .implicit_value(true);
+    parser.add_argument("-b", "--buffer_size")
+      .help(
+        "Calculate predictions within a buffer zone of n images either side"
+        "of the scan")
+      .scan<'u', size_t>()
+      .default_value<size_t>(0);
+    parser.add_argument("--nthreads")
+      .help(
+        "The number of threads to use for the fft calculation."
+        "Defaults to the value of std::thread::hardware_concurrency."
+        "Better performance can typically be obtained with a higher number"
+        "of threads than this.")
+      .scan<'u', size_t>()
+      .default_value<size_t>(1);
+}
 
-// void verify_parser(const argparse::ArgumentParser& parser) {
-//     if (!parser.is_used("ARG")) {
-//         logger->error("ERROR");
-//         std::exit(1);
-//     }
-// }
+void verify_parser(const argparse::ArgumentParser& parser) {
+    if (!parser.is_used("expt")) {
+        logger->error("Must specify experiment list file with --expt\n");
+        std::exit(1);
+    }
+    // FIXME use highest resolution by default to remove this requirement.
+    if (!parser.is_used("dmin")) {
+        logger->error("Must specify --dmin\n");
+        std::exit(1);
+    }
+}
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
     auto t1 = std::chrono::system_clock::now();
-    // auto parser = argparse::ArgumentParser();
-    // configure_parser(parser);
-    // parser.parse_args(argc, argv);
-    // verify_parser(parser);
+    auto parser = argparse::ArgumentParser();
+    configure_parser(parser);
 
-    // Initialize an ArgumentParser object: 
-    /*
-    parser = ArgumentParser(
-                usage=usage,
-                phil=phil_scope,
-                epilog=help_message,
-                check_format=False,
-                read_experiments=True,
-                )
-    */
+    try {
+        parser.parse_args(argc, argv);
+    } catch (const std::exception& err) {
+        logger->error(err.what());
+        std::exit(1);
+    }
+
+    verify_parser(parser);
+
+    auto imported_expt = parser.get<std::string>("expt");
+    auto dmin = parser.get<float>("dmin");
+    auto force_static = parser.get<bool>("force_static");
+    auto ignore_shadows = parser.get<bool>("ignore_shadows");
+    auto buffer_size = parser.get<size_t>("buffer_size");
+    auto nthreads = parser.get<size_t>("nthreads");
+
+    std::cout << imported_expt << '\n';
+    std::cout << dmin << '\n';
+    std::cout << force_static << '\n';
+    std::cout << ignore_shadows << '\n';
+    std::cout << buffer_size << '\n';
+    std::cout << nthreads << '\n';
 
     // Extract params, options form this parser
     /*
@@ -68,8 +109,8 @@ int main(int argc, char **argv) {
     for i_expt, expt in enumerate(experiments):
     */
 
-        // Predict reflections outside the range of the scan if buffer_size > 0
-        /*
+    // Predict reflections outside the range of the scan if buffer_size > 0
+    /*
         if params.buffer_size > 0:
             expt.scan.set_image_range(
                 (
@@ -85,20 +126,20 @@ int main(int argc, char **argv) {
             )
         */
 
-        // Create reflection table using `expt`, `params.force_static`, `params.d_min`
-        /*
+    // Create reflection table using `expt`, `params.force_static`, `params.d_min`
+    /*
         predicted = flex.reflection_table.from_predictions(
             expt, force_static=params.force_static, dmin=params.d_min
         )
         */
 
-        // Copy experiment identifiers verbatim
-        /*
+    // Copy experiment identifiers verbatim
+    /*
         predicted.experiment_identifiers()[i_expt] = experiments[i_expt].identifier
         predicted["id"] = flex.int(len(predicted), i_expt)
         predicted_all.extend(predicted)
         */
-    
+
     // If not ignoring shadows, look for reflections in the masked region
     /*
     if not params.ignore_shadows:
@@ -133,7 +174,6 @@ int main(int argc, char **argv) {
 
     auto t2 = std::chrono::system_clock::now();
     std::chrono::duration<double> elapsed_time = t2 - t1;
-    // logger->info("Total time for indexer: {:.4f}s", elapsed_time.count());
-    std::cout << elapsed_time << '\n';
+    logger->info("Total time for indexer: {:.4f}s", elapsed_time.count());
     return 0;
 }
