@@ -1,7 +1,12 @@
 #include <dx2/experiment.h>
+// #include <fmt/color.h>
+// #include <fmt/core.h>
+// #include <fmt/os.h>
+// #include <hdf5.h>
 
 #include <argparse/argparse.hpp>
 #include <chrono>
+// #include <dx2/h5/h5read_processed.hpp>
 // essential; common.hpp is in ffs => predict.cxx cannot be build on dx2 alone
 #include <common.hpp>
 #include <cstdlib>
@@ -11,10 +16,6 @@
 #include <iostream>  // Debugging
 #include <thread>
 #include <vector>  // Unused so far...
-
-// #include <fmt/color.h>
-// #include <fmt/core.h>
-// #include <fmt/os.h>
 
 /**
  * @brief Takes a default-initialized ArgumentParser object and configures it 
@@ -92,12 +93,16 @@ int main(int argc, char** argv) {
     verify_arguments(parser);
 
     // Obtain argument values from the command line
-    auto imported_expt = parser.get<std::string>("expt");
+    auto expt_path = parser.get<std::string>("expt");
     auto dmin = parser.get<float>("dmin");
     auto static_predict = parser.get<bool>("static_predict");
     auto dynamic_shadows = parser.get<bool>("dynamic_shadows");
     auto buffer_size = parser.get<size_t>("buffer_size");
     auto nthreads = parser.get<size_t>("nthreads");
+
+    // FIXME: What do the two macros below mean?
+    // hid_t file = H5Fopen(expt_path.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+    // std::cout << file << '\n';
 
     // Flatten experiments into a 1D array
     /*
@@ -186,6 +191,6 @@ int main(int argc, char** argv) {
 
     auto t2 = std::chrono::system_clock::now();
     std::chrono::duration<double> elapsed_time = t2 - t1;
-    logger->info("Total time for indexer: {:.4f}s", elapsed_time.count());
+    logger->info("Total time for prediction: {:.4f}s", elapsed_time.count());
     return 0;
 }
