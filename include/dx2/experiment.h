@@ -16,11 +16,11 @@ public:
   Experiment() = default;
   Experiment(json experiment_data);
   json to_json() const;
-  const Goniometer& goniometer() const;
-  const BeamType& beam() const;
-  Scan& scan();
-  const Detector& detector() const;
-  const Crystal& crystal() const;
+  const Goniometer &goniometer() const;
+  const BeamType &beam() const;
+  Scan &scan();
+  const Detector &detector() const;
+  const Crystal &crystal() const;
   void set_crystal(Crystal crystal);
 
 protected:
@@ -87,15 +87,17 @@ template <class BeamType> json Experiment<BeamType>::to_json() const {
 
 template <class BeamType> Scan &Experiment<BeamType>::scan() { return _scan; }
 
-template <class BeamType> const Goniometer& Experiment<BeamType>::goniometer() const {
+template <class BeamType>
+const Goniometer &Experiment<BeamType>::goniometer() const {
   return _goniometer;
 }
 
-template <class BeamType> const Detector& Experiment<BeamType>::detector() const {
+template <class BeamType>
+const Detector &Experiment<BeamType>::detector() const {
   return _detector;
 }
 
-template <class BeamType> const Crystal& Experiment<BeamType>::crystal() const {
+template <class BeamType> const Crystal &Experiment<BeamType>::crystal() const {
   return _crystal;
 }
 
@@ -104,7 +106,7 @@ void Experiment<BeamType>::set_crystal(Crystal crystal) {
   _crystal = crystal;
 }
 
-template <class BeamType> const BeamType& Experiment<BeamType>::beam() const {
+template <class BeamType> const BeamType &Experiment<BeamType>::beam() const {
   return _beam;
 }
 
