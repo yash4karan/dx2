@@ -1,6 +1,5 @@
 #include <dx2/experiment.h>
-//#include <dx2/reflection.h>
-
+#include <dx2/reflection.h>
 // #include <fmt/color.h>
 // #include <fmt/core.h>
 // #include <fmt/os.h>
@@ -157,13 +156,11 @@ int main(int argc, char** argv) {
         // Predict reflections outside the range of the scan if buffer_size > 0
         if (buffer_size > 0) {
             // FIXME: This code assumes that `scan()` returns a reference to the _scan object in expt; this is NOT the case at the time of writing.
-            // FIXME: This code assumes that there exists a `set_image_range()` method in Scan; this is NOT the case at the time of writing.
             std::array<int, 2> image_range{expt.scan().get_image_range()};
             std::array<double, 2> oscillation{expt.scan().get_oscillation()};
-            expt.scan().set_image_range(
-              {image_range[0] - buffer_size, image_range[1] + buffer_size});
-            expt.scan().set_oscillation(
-              {oscillation[0] - buffer_size * oscillation[1], oscillation[1]});
+            expt.scan() =
+              Scan({image_range[0] - buffer_size, image_range[1] + buffer_size},
+                   {oscillation[0] - buffer_size * oscillation[1], oscillation[1]});
         }
 
         // Write prediction algorithm here...
