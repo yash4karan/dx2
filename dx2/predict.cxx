@@ -1,5 +1,5 @@
 #include <dx2/experiment.h>
-#include <dx2/reflection.h>
+// #include <dx2/reflection.h>
 // #include <fmt/color.h>
 // #include <fmt/core.h>
 // #include <fmt/os.h>
@@ -26,6 +26,9 @@ class ReflectionTable {
     ReflectionTable() = default;
     ReflectionTable(std::string& h5_filepath) {}
     void add_table(ReflectionTable refl);
+    size_t size() {
+        return 1;
+    }
 };
 
 template <typename T>
@@ -126,16 +129,16 @@ int main(int argc, char** argv) {
     auto buffer_size = parser.get<int>("buffer_size");
     auto nthreads = parser.get<size_t>("nthreads");
 
+    // Import experiment file (JSON)
     // FIXME: What do the two macros below mean?
     // h5read_handle file = H5Fopen(expt_path.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
     // std::cout << file << '\n';
-
     // FIXME: Flatten experiments into a 1D array
     /*
     experiments = flatten_experiments(params.input.experiments)
     */
-    // FIXME: At this stage, assume that `experiments` has type std::vector<Experiment>
-    auto experiments = std::vector<Experiment<float>>(100);
+    // FIXME: At this stage, assume that `experiments` has type std::vector<Experiment> (this is the type that flatten()) from h5read.cc returns
+    auto experiments = std::vector<Experiment<MonochromaticBeam>>(100);
 
     // If length of experiments in 0, print a help message and exit
     if (!experiments.size()) {
@@ -144,10 +147,6 @@ int main(int argc, char** argv) {
     }
 
     // Create an empty reflection table to store predictions in
-    /*
-    predicted_all = reflection_table()
-    */
-    // FIXME: This is a placeholder for the actual reflection table.
     ReflectionTable predicted_all;
 
     // Populate `predicated_all` with predictions
@@ -164,7 +163,7 @@ int main(int argc, char** argv) {
         }
 
         // Write prediction algorithm here...
-        // Create reflection table using `expt`, `params.force_static`, `params.d_min`
+        // Create reflection table using `expt`, `static_predict`, `dmin`
         /*
         predicted = flex.reflection_table.from_predictions(
             expt, force_static=params.force_static, dmin=params.d_min
@@ -176,8 +175,9 @@ int main(int argc, char** argv) {
         // FIXME: This code assumes that the Experiment class contains a method `identifier()`. These classes do not exist yet.
         predicted.experiment_identifiers()[i] = experiments[i].identifier();
         // FIXME: The "id" might have different API; the data type of the "id" might be different.
-        predicted["id"] = std::array<int, 2>{len(predicted), i};
-        predicted_all.add_table(predicted);
+        predicted["id"] = std::array<int, 2>{predicted.size(), i};
+        // FIXME: The extend function does not exist in ReflectionTable
+        predicted_all.extend(predicted);
     }
 
     // If not ignoring shadows, look for reflections in the masked region
@@ -197,7 +197,7 @@ int main(int argc, char** argv) {
         predicted_all = predicted_all.select(~shadowed)
     */
     if (dynamic_shadows) {
-        // FIXME: Assuming that `experiments` is a Experiment-dictionary that is already conformant with JSON
+        // FIXME: Assuming that `experiments` is a Experiment-dictionary whose entries are JSON
     }
 
     // Try to find bounding boxed for each experiment
@@ -209,6 +209,8 @@ int main(int argc, char** argv) {
         continue;
     }
 
+    // FIXE: Temp variable: DO NOT RETAIN
+    std::string dataset_path = "HELLOWORLD";
     // Save reflections to file
     logger->info("Saving {} reflections to {}", predicted_all.size(), output_path);
     // FIXME: The following call needs to be modified as the dataset path is included within the Reflection Table. An overload will do.
