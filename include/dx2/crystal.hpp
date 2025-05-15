@@ -1,12 +1,11 @@
 #ifndef DX2_MODEL_CRYSTAL_H
 #define DX2_MODEL_CRYSTAL_H
-#include "utils.h"
+#include "utils.hpp"
 #include <Eigen/Dense>
 #include <gemmi/cellred.hpp>
 #include <gemmi/math.hpp>
 #include <gemmi/symmetry.hpp>
 #include <gemmi/unitcell.hpp>
-#include <iostream>
 #include <math.h>
 #include <nlohmann/json.hpp>
 
@@ -35,6 +34,7 @@ public:
   Matrix3d get_U_matrix() const;
   Matrix3d get_B_matrix() const;
   void niggli_reduce();
+  void set_A_matrix(Matrix3d A);
   json to_json() const;
 
 protected:
@@ -98,20 +98,32 @@ void Crystal::niggli_reduce() {
   char centering{'P'};
   gemmi::GruberVector gv(unit_cell_, centering, true);
   gv.niggli_reduce();
-  gemmi::UnitCell niggli_cell = gv.get_cell();
-  std::cout << "Input cell:" << std::endl;
-  std::cout << unit_cell_.a << " " << unit_cell_.b << " " << unit_cell_.c << " "
-            << unit_cell_.alpha << " " << unit_cell_.beta << " "
-            << unit_cell_.gamma << std::endl;
-  std::cout << "Reduced cell:" << std::endl;
-  std::cout << niggli_cell.a << " " << niggli_cell.b << " " << niggli_cell.c
-            << " " << niggli_cell.alpha << " " << niggli_cell.beta << " "
-            << niggli_cell.gamma << std::endl;
-  unit_cell_ = niggli_cell;
+  unit_cell_ = gv.get_cell(); // The Niggli cell
   gemmi::Op cb = *gv.change_of_basis;
 
   Matrix3d cb_op = Matrix3d_from_gemmi_cb(cb);
   A_ = A_ * cb_op.inverse();
+  gemmi::Mat33 B = unit_cell_.frac.mat;
+  B_ << B.a[0][0], B.a[1][0], B.a[2][0], B.a[0][1], B.a[1][1], B.a[2][1],
+      B.a[0][2], B.a[1][2],
+      B.a[2][2]; // Transpose due to different definition of B form
+  U_ = A_ * B_.inverse();
+}
+
+void Crystal::set_A_matrix(Matrix3d A) {
+  // input in reciprocal units
+  A_ = A;
+  Matrix3d Areal = A.inverse();
+  Vector3d a{Areal(0, 0), Areal(0, 1), Areal(0, 2)};
+  Vector3d b{Areal(1, 0), Areal(1, 1), Areal(1, 2)};
+  Vector3d c{Areal(2, 0), Areal(2, 1), Areal(2, 2)};
+  double real_space_a = a.norm();
+  double real_space_b = b.norm();
+  double real_space_c = c.norm();
+  double alpha = angle_between_vectors_degrees(b, c);
+  double beta = angle_between_vectors_degrees(c, a);
+  double gamma = angle_between_vectors_degrees(a, b);
+  unit_cell_ = {real_space_a, real_space_b, real_space_c, alpha, beta, gamma};
   gemmi::Mat33 B = unit_cell_.frac.mat;
   B_ << B.a[0][0], B.a[1][0], B.a[2][0], B.a[0][1], B.a[1][1], B.a[2][1],
       B.a[0][2], B.a[1][2],
