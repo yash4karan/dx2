@@ -3,14 +3,6 @@ add_library(
     empty.cxx
 )
 
-add_executable(predict
-            predict.cxx)
-
-target_link_libraries(predict
-    PRIVATE
-    dx2
-) 
-
 target_link_libraries(dx2
     PUBLIC
     Eigen3::Eigen
