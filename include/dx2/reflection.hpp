@@ -781,16 +781,19 @@ public:
    * element).
    *
    * @param name The name of the column.
+   * @param shape A vector describing the shape of the column (e.g.,
+   * `{N}` for 1D, `{N, M}` for 2D).
    * @param column_data A vector of bools to convert and store as uint8_t.
    */
-  void add_column(const std::string &name,
-                  const std::vector<bool> &column_data) {
+  template<>
+  void add_column<bool>(const std::string &name, const std::vector<size_t> &shape,
+                        const std::vector<bool> &column_data) {
     std::vector<h5dispatch::BoolEnum> converted(column_data.size());
     for (size_t i = 0; i < column_data.size(); ++i) {
       converted[i] = column_data[i] ? h5dispatch::BoolEnum::TRUE
                                     : h5dispatch::BoolEnum::FALSE;
     }
-    add_column<h5dispatch::BoolEnum>(name, converted);
+    add_column<h5dispatch::BoolEnum>(name, shape, converted);
   }
 #pragma endregion
 
