@@ -267,7 +267,8 @@ public:
   Detector(json detector_data);
   json to_json() const;
   std::vector<Panel> panels() const;
-  std::optional<std::pair<int, std::array<double, 2>>> get_ray_intersection(const Vector3d& s1) const;
+  std::optional<std::pair<int, std::array<double, 2>>>
+  get_ray_intersection(const Vector3d &s1) const;
   void update(Matrix3d d);
 
 protected:
@@ -294,16 +295,18 @@ json Detector::to_json() const {
 std::vector<Panel> Detector::panels() const { return _panels; }
 
 /**
- * @brief Return a pair of values: the index of the most viable 
- * intersected panel and the coordinate of intersection (in mm) provided 
+ * @brief Return a pair of values: the index of the most viable
+ * intersected panel and the coordinate of intersection (in mm) provided
  * an intersection is found. Otherwise, return a std::nullopt indicating
  * no intersection
- * 
+ *
  * @param s1 The beam vector from the crystal onto the detector.
- * @return std::optional<std::pair<int, std::array<double, 2>>> 
+ * @return std::optional<std::pair<int, std::array<double, 2>>>
  */
-std::optional<std::pair<int, std::array<double, 2>>> Detector::get_ray_intersection(const Vector3d& s1) const {
-  std::optional<std::pair<int, std::array<double, 2>>> intersection = std::nullopt;
+std::optional<std::pair<int, std::array<double, 2>>>
+Detector::get_ray_intersection(const Vector3d &s1) const {
+  std::optional<std::pair<int, std::array<double, 2>>> intersection =
+      std::nullopt;
   // Loop through all detectors. If the w component of the (u, v, w)
   // vector points in the correct direction, and is greater than that of
   // the current closest valid coordinate, then calculate the coordinate.
