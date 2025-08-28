@@ -29,6 +29,7 @@
 #include <random>
 #include <sstream>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #pragma region Type Helpers
@@ -706,36 +707,47 @@ public:
   template <typename T>
   void add_column(const std::string &name, const std::vector<size_t> &shape,
                   const std::vector<T> &column_data) {
-    auto col = std::make_unique<TypedColumn<T>>(name, shape, column_data);
-
-    // Check for duplicate column names
-    for (const auto &existing_col : data) {
-      if (existing_col->get_name() == name) {
-        throw std::runtime_error("Column with name already exists: " + name);
+    // Check if the type T is a bool. If so, convert to BoolEnum and add column.
+    if constexpr (std::is_same_v<T, bool>) {
+      std::vector<h5dispatch::BoolEnum> converted(column_data.size());
+      for (size_t i = 0; i < column_data.size(); ++i) {
+        converted[i] = column_data[i] ? h5dispatch::BoolEnum::TRUE
+                                      : h5dispatch::BoolEnum::FALSE;
       }
+      add_column<h5dispatch::BoolEnum>(name, shape, converted);
     }
+    else {
+      auto col = std::make_unique<TypedColumn<T>>(name, shape, column_data);
 
-    // Check if type T is supported
-    const auto &registry = h5dispatch::get_supported_types();
-    bool supported = std::any_of(registry.begin(), registry.end(),
-                                 [](const h5dispatch::H5TypeInfo &info) {
-                                   return info.cpp_type == typeid(T);
-                                 });
+      // Check for duplicate column names
+      for (const auto &existing_col : data) {
+        if (existing_col->get_name() == name) {
+          throw std::runtime_error("Column with name already exists: " + name);
+        }
+      }
 
-    if (!supported) {
-      throw std::runtime_error(
-          "Attempted to add column with unsupported type: " +
-          std::string(typeid(T).name()));
+      // Check if type T is supported
+      const auto &registry = h5dispatch::get_supported_types();
+      bool supported = std::any_of(registry.begin(), registry.end(),
+                                  [](const h5dispatch::H5TypeInfo &info) {
+                                    return info.cpp_type == typeid(T);
+                                  });
+
+      if (!supported) {
+        throw std::runtime_error(
+            "Attempted to add column with unsupported type: " +
+            std::string(typeid(T).name()));
+      }
+
+      // Ensure row count consistency
+      if (!data.empty() && col->get_shape()[0] != get_row_count()) {
+        throw std::runtime_error("Row count mismatch when adding column: " +
+                                name);
+      }
+
+      // Add the new column to the table
+      data.push_back(std::move(col));
     }
-
-    // Ensure row count consistency
-    if (!data.empty() && col->get_shape()[0] != get_row_count()) {
-      throw std::runtime_error("Row count mismatch when adding column: " +
-                               name);
-    }
-
-    // Add the new column to the table
-    data.push_back(std::move(col));
   }
 
   /**
@@ -876,28 +888,5 @@ public:
   }
 #pragma endregion
 };
-
-  /**
-   * @brief Specialised overload to add a column from std::vector<bool>.
-   *
-   * std::vector<bool> does not provide `.data()` due to bit-packing, so
-   * this overload copies the data into a vector of uint8_t (1 byte per
-   * element).
-   *
-   * @param name The name of the column.
-   * @param shape A vector describing the shape of the column (e.g.,
-   * `{N}` for 1D, `{N, M}` for 2D).
-   * @param column_data A vector of bools to convert and store as uint8_t.
-   */
-  template<>
-  void ReflectionTable::add_column<bool>(const std::string &name, const std::vector<size_t> &shape,
-                        const std::vector<bool> &column_data) {
-    std::vector<h5dispatch::BoolEnum> converted(column_data.size());
-    for (size_t i = 0; i < column_data.size(); ++i) {
-      converted[i] = column_data[i] ? h5dispatch::BoolEnum::TRUE
-                                    : h5dispatch::BoolEnum::FALSE;
-    }
-    add_column<h5dispatch::BoolEnum>(name, shape, converted);
-  }
 
 #pragma endregion
