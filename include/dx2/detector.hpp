@@ -70,6 +70,7 @@ public:
   Panel() = default;
   Panel(json panel_data);
   Matrix3d get_d_matrix() const;
+  Matrix3d get_D_matrix() const;
   std::array<double, 2> px_to_mm(double x, double y) const;
   std::array<double, 2> mm_to_px(double x, double y) const;
   std::array<double, 2> get_ray_intersection(Vector3d s1) const;
@@ -82,6 +83,7 @@ public:
   std::array<double, 2> get_image_size_mm() const;
   double get_directed_distance() const;
   bool has_parallax_correction() const;
+  bool is_coord_valid_mm(const std::array<double, 2> xy) const;
   double get_mu() const;
   double get_thickness() const;
   void update(Matrix3d d);
@@ -131,6 +133,11 @@ void Panel::update(Matrix3d d) {
   slow_axis_ = {d(0, 1), d(1, 1), d(2, 1)};
   origin_ = {d(0, 2), d(1, 2), d(2, 2)};
   normal_ = fast_axis_.cross(slow_axis_);
+}
+
+bool Panel::is_coord_valid_mm(std::array<double, 2> xy) const {
+  auto size = get_image_size_mm();
+  return (0 <= xy[0] && xy[0] < size[0]) && (0 <= xy[1] && xy[1] < size[1]);
 }
 
 Panel::Panel(json panel_data) {
@@ -189,6 +196,8 @@ json Panel::to_json() const {
 }
 
 Matrix3d Panel::get_d_matrix() const { return d_; }
+
+Matrix3d Panel::get_D_matrix() const { return D_; }
 
 std::array<double, 2> Panel::get_ray_intersection(Vector3d s1) const {
   Vector3d v = D_ * s1;
@@ -258,6 +267,8 @@ public:
   Detector(json detector_data);
   json to_json() const;
   std::vector<Panel> panels() const;
+  std::optional<std::pair<int, std::array<double, 2>>>
+  get_ray_intersection(const Vector3d &s1) const;
   void update(Matrix3d d);
 
 protected:
@@ -282,6 +293,40 @@ json Detector::to_json() const {
 }
 
 std::vector<Panel> Detector::panels() const { return _panels; }
+
+/**
+ * @brief Return a pair of values: the index of the most viable
+ * intersected panel and the coordinate of intersection (in mm) provided
+ * an intersection is found. Otherwise, return a std::nullopt indicating
+ * no intersection
+ *
+ * @param s1 The beam vector from the crystal onto the detector.
+ * @return std::optional<std::pair<int, std::array<double, 2>>>
+ */
+std::optional<std::pair<int, std::array<double, 2>>>
+Detector::get_ray_intersection(const Vector3d &s1) const {
+  std::optional<std::pair<int, std::array<double, 2>>> intersection =
+      std::nullopt;
+  // Loop through all detectors. If the w component of the (u, v, w)
+  // vector points in the correct direction, and is greater than that of
+  // the current closest valid coordinate, then calculate the coordinate.
+  // If the coordinate is valid, then set this coordinate as the current
+  // best bet. This is because the larger the w, the closer the panel is
+  // to the crystal. Therefore, in case there is an overlap between panels,
+  // the lower distance panel is preferred.
+  double w_max = 0;
+  for (std::size_t i = 0; i < _panels.size(); ++i) {
+    Vector3d v = _panels[i].get_D_matrix() * s1;
+    if (v[2] > w_max) {
+      std::array<double, 2> xy_temp{v[0] / v[2], v[1] / v[2]};
+      if (_panels[i].is_coord_valid_mm(xy_temp)) {
+        intersection = {(int)i, xy_temp};
+        w_max = v[2];
+      }
+    }
+  }
+  return intersection;
+}
 
 void Detector::update(Matrix3d d) { _panels[0].update(d); }
 
