@@ -715,8 +715,7 @@ public:
                                       : h5dispatch::BoolEnum::FALSE;
       }
       add_column<h5dispatch::BoolEnum>(name, shape, converted);
-    }
-    else {
+    } else {
       auto col = std::make_unique<TypedColumn<T>>(name, shape, column_data);
 
       // Check for duplicate column names
@@ -729,9 +728,9 @@ public:
       // Check if type T is supported
       const auto &registry = h5dispatch::get_supported_types();
       bool supported = std::any_of(registry.begin(), registry.end(),
-                                  [](const h5dispatch::H5TypeInfo &info) {
-                                    return info.cpp_type == typeid(T);
-                                  });
+                                   [](const h5dispatch::H5TypeInfo &info) {
+                                     return info.cpp_type == typeid(T);
+                                   });
 
       if (!supported) {
         throw std::runtime_error(
@@ -742,7 +741,7 @@ public:
       // Ensure row count consistency
       if (!data.empty() && col->get_shape()[0] != get_row_count()) {
         throw std::runtime_error("Row count mismatch when adding column: " +
-                                name);
+                                 name);
       }
 
       // Add the new column to the table
